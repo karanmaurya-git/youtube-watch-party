@@ -22,7 +22,7 @@ export const WebSocketProvider = ({ children }) => {
     if (!isAuthenticated) return;
     try {
       const ticket = await fetchWsTicket();
-      wsClient.connect(ticket);
+      return await wsClient.connect(ticket);
     } catch (error) {
       console.error('Failed to obtain WS ticket for connection:', error);
       setConnectionStatus('disconnected');

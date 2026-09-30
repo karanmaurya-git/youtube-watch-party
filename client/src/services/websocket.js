@@ -10,11 +10,17 @@ export class WebSocketClient {
     this.reconnectDelay = 2000;
     this.isManuallyClosed = false;
     this.ticket = null;
+    this.messageQueue = [];
+    this.connectionPromise = null;
   }
 
   connect(ticket) {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return;
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+
+    if (this.connectionPromise) {
+      return this.connectionPromise;
     }
 
     this.ticket = ticket;
@@ -24,50 +30,69 @@ export class WebSocketClient {
 
     this.emitStatus('connecting');
 
-    try {
-      this.ws = new WebSocket(this.url);
+    this.connectionPromise = new Promise((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(this.url);
 
-      this.ws.onopen = () => {
-        console.log('⚡ Native WebSocket connected');
-        this.reconnectAttempts = 0;
-        this.emitStatus('connected');
-      };
+        this.ws.onopen = () => {
+          console.log('⚡ Native WebSocket connected');
+          this.reconnectAttempts = 0;
+          this.emitStatus('connected');
+          this.connectionPromise = null;
 
-      this.ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          this.handleIncomingMessage(data);
-        } catch (err) {
-          console.error('❌ Failed to parse incoming WebSocket message:', err);
-        }
-      };
+          // Flush queued messages
+          while (this.messageQueue.length > 0) {
+            const msg = this.messageQueue.shift();
+            this.ws.send(JSON.stringify(msg));
+          }
 
-      this.ws.onclose = (event) => {
-        console.log('🔌 Native WebSocket closed', event.code, event.reason);
+          resolve();
+        };
+
+        this.ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            this.handleIncomingMessage(data);
+          } catch (err) {
+            console.error('❌ Failed to parse incoming WebSocket message:', err);
+          }
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('🔌 Native WebSocket closed', event.code, event.reason);
+          this.emitStatus('disconnected');
+          this.connectionPromise = null;
+
+          if (!this.isManuallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
+            console.log(`🔄 Reconnecting in ${Math.round(delay / 1000)}s (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+            this.emitStatus('reconnecting');
+            setTimeout(() => {
+              if (this.ticket) this.connect(this.ticket);
+            }, delay);
+          }
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('❌ Native WebSocket error:', error);
+          this.connectionPromise = null;
+          reject(error);
+        };
+      } catch (error) {
+        console.error('❌ WebSocket instantiation failed:', error);
         this.emitStatus('disconnected');
+        this.connectionPromise = null;
+        reject(error);
+      }
+    });
 
-        if (!this.isManuallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++;
-          const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
-          console.log(`🔄 Reconnecting in ${Math.round(delay / 1000)}s (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-          this.emitStatus('reconnecting');
-          setTimeout(() => {
-            if (this.ticket) this.connect(this.ticket);
-          }, delay);
-        }
-      };
-
-      this.ws.onerror = (error) => {
-        console.error('❌ Native WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('❌ WebSocket instantiation failed:', error);
-      this.emitStatus('disconnected');
-    }
+    return this.connectionPromise;
   }
 
   disconnect() {
     this.isManuallyClosed = true;
+    this.messageQueue = [];
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -79,7 +104,8 @@ export class WebSocketClient {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(messageObj));
     } else {
-      console.warn('⚠️ Cannot send message: WebSocket is not open', messageObj);
+      console.log('⏳ Queuing message until WebSocket connects:', messageObj);
+      this.messageQueue.push(messageObj);
     }
   }
 
