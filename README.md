@@ -66,12 +66,14 @@ youtube-watch-party/
 ## 🚀 Quick Start (Local Setup)
 
 ### 1. Prerequisites
+
 - Node.js (v18+)
 - MongoDB connection string (local or MongoDB Atlas)
 
 ### 2. Environment Variables Setup
 
 #### Server `.env` (`server/.env`)
+
 ```env
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/youtube-watch-party?retryWrites=true&w=majority
@@ -82,6 +84,7 @@ NODE_ENV=development
 ```
 
 #### Client `.env` (`client/.env`)
+
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_WS_URL=ws://localhost:5000
@@ -138,5 +141,13 @@ npm test
 
 ---
 
-## 📄 License
-MIT License. Created as an internship-level showcase application.
+### 👨‍💻 Author
+
+**Karan Maurya**
+
+- GitHub: [@karanaurya-git](https://github.com/karanaurya-git)
+- LinkedIn: [karan-maurya-4260b6293/](https://linkedin.com/in/karan-maurya-4260b6293/)
+
+### 📄 License
+
+MIT License.

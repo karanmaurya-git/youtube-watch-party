@@ -35,6 +35,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Root Route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'YouTube Watch Party API is running',
+    environment: env.NODE_ENV,
+  });
+});
+
 // Health Check Endpoint (Required by assignment section 47)
 app.get('/api/health', (req, res) => {
   res.status(200).json({
