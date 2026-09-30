@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node --test src/tests/"
+    "test": "node --test tests/*.test.js"
   },
   "keywords": [],
   "license": "MIT",
