@@ -8,7 +8,7 @@ A full-stack, real-time web application that allows multiple participants to wat
 
 [![View Live](https://img.shields.io/badge/🎬_YouTube_Watch_Party-View_Live-success?style=for-the-badge)](https://youtube-watch-party-ecru-seven.vercel.app/)
 
-## [![View Live](https://img.shields.io/badge/🖥️_Backend-View_Live-success?style=for-the-badge)](https://youtube-watch-party-server-4zja.onrender.com/)
+[![Backend Server](https://img.shields.io/badge/🖥️_Backend-View_Live-blue?style=for-the-badge)](https://youtube-watch-party-server-4zja.onrender.com/)
 
 ## 🌟 Features
 
