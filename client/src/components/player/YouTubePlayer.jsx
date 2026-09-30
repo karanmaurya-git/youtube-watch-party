@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+
 export const YouTubePlayer = ({
   videoId,
   playState,
@@ -11,14 +14,12 @@ export const YouTubePlayer = ({
 }) => {
   const containerRef = useRef(null);
   const playerRef = useRef(null);
-  const isApiReadyRef = useRef(false);
   const isRemoteActionRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
 
   // 1. Dynamically Load YouTube IFrame API Script
   useEffect(() => {
     if (window.YT && window.YT.Player) {
-      isApiReadyRef.current = true;
       initPlayer();
       return;
     }
@@ -35,7 +36,6 @@ export const YouTubePlayer = ({
     const previousCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       if (previousCallback) previousCallback();
-      isApiReadyRef.current = true;
       initPlayer();
     };
   }, []);
@@ -68,21 +68,17 @@ export const YouTubePlayer = ({
 
   // 2. Handle State Changes (Distinguish Local User Click vs Remote WebSocket Sync)
   const handlePlayerStateChange = (event) => {
-    // If state change was triggered by remote WebSocket sync, IGNORE to prevent infinite event loop!
     if (isRemoteActionRef.current) {
-      console.log('🛡️ Remote sync event absorbed by player (preventing loop)');
+      console.log('🛡️ Remote sync event absorbed by player');
       isRemoteActionRef.current = false;
       return;
     }
 
-    // Only authorized users (HOST/MODERATOR) generate outbound WS events from local clicks
     if (!canControl) return;
 
-    const YT_STATE = window.YT.PlayerState;
-
-    if (event.data === YT_STATE.PLAYING) {
+    if (event.data === YT_PLAYING) {
       if (onLocalPlay) onLocalPlay();
-    } else if (event.data === YT_STATE.PAUSED) {
+    } else if (event.data === YT_PAUSED) {
       if (onLocalPause) onLocalPause();
     }
   };
@@ -108,15 +104,17 @@ export const YouTubePlayer = ({
 
     try {
       const state = playerRef.current.getPlayerState?.();
-      const YT_STATE = window.YT ? window.YT.PlayerState : null;
-      if (!YT_STATE) return;
 
-      if (playState === 'playing' && state !== YT_STATE.PLAYING) {
-        isRemoteActionRef.current = true;
-        playerRef.current.playVideo();
-      } else if (playState === 'paused' && state !== YT_STATE.PAUSED) {
-        isRemoteActionRef.current = true;
-        playerRef.current.pauseVideo();
+      if (playState === 'playing') {
+        if (state !== YT_PLAYING) {
+          isRemoteActionRef.current = true;
+          playerRef.current.playVideo();
+        }
+      } else if (playState === 'paused') {
+        if (state !== YT_PAUSED) {
+          isRemoteActionRef.current = true;
+          playerRef.current.pauseVideo();
+        }
       }
     } catch (e) {
       console.error('Error syncing playState:', e);
